@@ -7,14 +7,14 @@ from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
-from .yfinance_control import get_stock_price, get_stock_ratio
+from openai import OpenAI
 
 NAVER_API_URL = "https://openapi.naver.com/v1/search/news.json"
 
 def get_news_articles(query, max_results=1000):
     headers = {
         'X-Naver-Client-Id': os.environ.get('NAVER_CLIENT_ID'),
-        'X-Naver-Client-Secret': os.environ.get('MXCA9OQhyH')
+        'X-Naver-Client-Secret': os.environ.get('NAVER_CLIENT_SECRET')
     }
     articles = []
     params = {
@@ -37,6 +37,8 @@ def get_news_articles(query, max_results=1000):
             break
 
     return articles[:max_results]  # 요청한 최대 수만큼 자르기
+
+
 
 def fetch_article_content(url):
     headers = {
@@ -73,14 +75,14 @@ def save_news_articles(articles, query):
         document_text = f"{title}\n{content}"
         document = Document(
             page_content = document_text,
-            metadata = {"date": date.strftime('%Y-%m-%d'), "company": query, "price": get_stock_price(query, date), "price_change": get_stock_ratio(query, date)}
+            metadata = {"date": date.strftime('%Y-%m-%d'), "url": url, "query": query}
         )
 
         texts = text_splitter.split_documents([document])
         documents.extend(texts)
 
     # 기존 Chroma 데이터베이스 불러오기
-    vectordb = Chroma(persist_directory="chroma_db", embedding_function=embedding_function)
+    vectordb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
 
     # 새로운 데이터 추가
     vectordb.add_documents(documents)
@@ -88,3 +90,28 @@ def save_news_articles(articles, query):
 def crawl_and_save_news(query):
     articles = get_news_articles(query)
     save_news_articles(articles, query)
+    
+    
+    
+def get_company_news_today(company, date):
+    # 네이버 API를 이용해 뉴스 기사 가져오기
+    api_url = f"https://openapi.naver.com/v1/search/news.json?query={company}&display=20"  # 최대 20개 기사 가져오기
+    headers = {
+        'X-Naver-Client-Id': os.environ.get('NAVER_CLIENT_ID'),
+        'X-Naver-Client-Secret': os.environ.get('NAVER_CLIENT_SECRET')
+    }
+    response = requests.get(api_url, headers=headers)
+    if response.status_code == 200:
+        articles = response.json()['items']
+        filtered_articles = []
+        for article in articles:
+            pub_date = datetime.strptime(article['pubDate'], '%a, %d %b %Y %H:%M:%S %z')
+            if pub_date.date() == date:
+                filtered_articles.append(article)
+        return filtered_articles
+    else:
+        return []
+    
+
+
+
