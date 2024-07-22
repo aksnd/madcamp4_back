@@ -10,6 +10,8 @@ import yfinance as yf
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from langchain_community.vectorstores import Chroma
+from langchain.schema import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
@@ -121,6 +123,9 @@ llm = ChatOpenAI(api_key=api_key)
 def chatbot_response(request):
     user_input = request.data.get('input', '')
 
+    # 사용자 질문 임베딩 및 저장
+    save_user_question(user_input)
+
     # VectorDB 불러오기
     vectordb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
 
@@ -153,6 +158,24 @@ def chatbot_response(request):
         'context': response.get('context', [])
     })
 
+def save_user_question(question):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=0)
+    documents = []
+
+    # 사용자 질문을 Document로 변환
+    document = Document(
+        page_content=question,
+        metadata={"user_id": "admin"}
+    )
+
+    texts = text_splitter.split_documents([document])
+    documents.extend(texts)
+
+    # 기존 user_db 불러오기
+    user_db = Chroma(persist_directory="user_db", embedding_function=embedding_function)
+
+    # 새로운 데이터 추가
+    user_db.add_documents(documents)
 
 @api_view(['POST'])
 def recommend_company(request):
