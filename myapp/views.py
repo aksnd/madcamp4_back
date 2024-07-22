@@ -21,6 +21,45 @@ from langchain.retrievers import MultiQueryRetriever
 from datetime import datetime, timedelta, date
 import os
 
+import requests
+from django.shortcuts import redirect, render
+from django.contrib.auth import login
+#from django.contrib.auth.models import User
+from .models import User  # 커스텀 User 모델 임포트
+
+def kakao_login(request):
+    app_rest_api_key = '619b59af6b0f7c4accad132301921e47'
+    redirect_uri = 'http://localhost:8000/kakao/callback/'
+    kakao_oauth_url = f"https://kauth.kakao.com/oauth/authorize?client_id={app_rest_api_key}&redirect_uri={redirect_uri}&response_type=code"
+    return redirect(kakao_oauth_url)
+
+def kakao_callback(request):
+    app_rest_api_key = '619b59af6b0f7c4accad132301921e47'
+    redirect_uri = 'http://localhost:8000/kakao/callback/'
+    code = request.GET.get('code')
+    print(code)
+    token_url = f"https://kauth.kakao.com/oauth/token?grant_type=authorization_code&client_id={app_rest_api_key}&redirect_uri={redirect_uri}&code={code}"
+    token_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    token_response = requests.post(token_url, headers=token_headers)
+    token_json = token_response.json()
+    access_token = token_json.get('access_token')
+
+    user_url = "https://kapi.kakao.com/v2/user/me"
+    user_headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+    }
+    user_info_response = requests.get(user_url, headers=user_headers)
+    user_info_json = user_info_response.json()
+    kakao_id = user_info_json.get('id')
+    
+    
+    user, created = User.objects.get_or_create(kakao_id=kakao_id)
+    print(created)
+    if created:
+        user.save()
+    return redirect('http://localhost:3000/')
+
 class PredictView(View):
     def get(self, request):
         company = request.GET.get('company', None)
