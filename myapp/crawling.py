@@ -75,14 +75,14 @@ def save_news_articles(articles, query):
         document_text = f"{title}\n{content}"
         document = Document(
             page_content = document_text,
-            metadata = {"date": date.strftime('%Y-%m-%d'), "url": url, "query": query}
+            metadata = {"date": date.strftime('%Y-%m-%d'), "url": url, "company": query}
         )
 
         texts = text_splitter.split_documents([document])
         documents.extend(texts)
 
     # 기존 Chroma 데이터베이스 불러오기
-    vectordb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
+    vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
 
     # 새로운 데이터 추가
     vectordb.add_documents(documents)
@@ -107,6 +107,7 @@ def get_company_news_today(company, date):
         for article in articles:
             pub_date = datetime.strptime(article['pubDate'], '%a, %d %b %Y %H:%M:%S %z')
             if pub_date.date() == date:
+                article['content']= fetch_article_content(article['link'])
                 filtered_articles.append(article)
         return filtered_articles
     else:

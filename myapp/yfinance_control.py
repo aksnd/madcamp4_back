@@ -2,16 +2,24 @@ import yfinance as yf
 from datetime import datetime, timedelta
 
 def change_company_to_ticker(company):
-    if(company=="한화오션"):
-        return "042660.KS"
-    elif(company=="고려아연"):
-        return "010130.KS"
-    elif(company=="금양"):
-        return "001570.KS"
-    elif(company=="현대해상"):
-        return "001450.KS"
-    else:
-        return None
+    company_to_ticker = {
+        "삼성전자": "005930.KS",
+        "SK하이닉스": "000660.KS",
+        "LG에너지솔루션": "000660.KS",
+        "삼성바이오로직스": "207940.KS",
+        "현대차": "005380.KS",
+        "기아": "000270.KS",
+        "셀트리온": "068270.KS",
+        "KB금융": "105560.KS",
+        "POSCO홀딩스": "005490.KS",
+        "NAVER": "035420.KS",
+        "한화오션": "042660.KS",
+        "고려아연": "010130.KS",
+        "금양": "001570.KS",
+        "현대해상": "001450.KS"
+    }
+    
+    return company_to_ticker.get(company, None)
 
 
 def get_stock_price_on_date(ticker, date_str):
