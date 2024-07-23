@@ -21,6 +21,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.retrievers import MultiQueryRetriever
 from datetime import datetime, timedelta, date
 import os
+import numpy as np
 from newspaper import Article
 
 import requests
@@ -244,6 +245,10 @@ def save_user_question(question, kakao_id):
 
     # 새로운 데이터 추가
     user_db.add_documents(documents)
+
+def get_user_query_vector(kakao_id):
+    # 사용자 DB에서 사용자 질문 벡터 가져오기
+    user_db = Chroma(persist_directory="user_db", embedding_function=embedding_function)
 
 @api_view(['POST'])
 def recommend_company(request):
