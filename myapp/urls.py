@@ -2,7 +2,7 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ItemViewSet, simple_text, PredictView,CheckPrice, chatbot_response, EmotionView, recommend_company, kakao_login,kakao_callback;
+from .views import ItemViewSet, simple_text, PredictView,CheckPrice, chatbot_response, EmotionView, recommend_company, kakao_login,kakao_callback,kakao_logout;
 
 router = DefaultRouter()
 router.register(r'items', ItemViewSet)
@@ -17,4 +17,5 @@ urlpatterns = [
     path('api/recommend/', recommend_company, name='recommend_company'),
     path('kakao/login/', kakao_login, name='kakao_login'),
     path('kakao/callback/', kakao_callback, name='kakao_callback'),
+    path('kakao/logout/', kakao_logout, name='kakao_logout'),
 ]

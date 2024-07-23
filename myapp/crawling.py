@@ -1,5 +1,5 @@
 import requests
-import getpass
+from newspaper import Article
 import os
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
