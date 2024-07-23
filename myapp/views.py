@@ -3,7 +3,7 @@ from .models import Item
 from .serializers import ItemSerializer
 from django.http import JsonResponse
 from django.views import View
-from .yfinance_control import get_stock_price_on_date, get_stock_price
+from .yfinance_control import get_stock_price_on_date, get_stock_price, get_historical_stock_data
 from .crawling import get_company_news_today
 from .get_emotion import calculate_emotion_score, calculate_relevance_score
 import yfinance as yf
@@ -63,7 +63,7 @@ def kakao_callback(request):
     print(created)
     if created:
         user.save()
-    return redirect(f'http://localhost:3000/login-success?kakao_id={kakao_id}')
+    return redirect(f'http://localhost:3002/login-success?kakao_id={kakao_id}')
 
 def kakao_logout(request):
     access_token = request.session.get('access_token')
@@ -75,8 +75,8 @@ def kakao_logout(request):
         response = requests.post(kakao_logout_url, headers=headers)
         if response.status_code == 200:
             django_logout(request)
-            return redirect('http://localhost:3000/')
-    return redirect('http://localhost:3000/')
+            return redirect('http://localhost:3002/')
+    return redirect('http://localhost:3002/')
 
 class PredictView(View):
     def get(self, request):
@@ -84,9 +84,12 @@ class PredictView(View):
         if not company:
             return JsonResponse({'error': 'company is required'}, status=400)
         dates = date.today()
+        start_date = dates - timedelta(days=30)  # 과거 30일 간의 데이터를 가져오기 위한 시작 날짜
+        end_date = dates
         try:
             price = get_stock_price(company,dates)
             articles = get_company_news_today(company,dates)
+            historical_data = get_historical_stock_data(company, start_date, end_date)
 
             result_articles = []
             for article in articles:
@@ -108,7 +111,8 @@ class PredictView(View):
 
             response_data =  {
                 'price': price,
-                'articles': result_articles
+                'articles': result_articles,
+                'historical_data': historical_data,
             }
             return JsonResponse(response_data, status=200)
         except Exception as e:
@@ -264,7 +268,7 @@ def get_relevant_news(kakao_id):
     print("get user vector!!! ", len(user_vector))
     # Chroma DB에서 뉴스 기사 검색
     vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
-    search_results = vectordb.similarity_search_by_vector(embedding=user_vector, k=3)
+    search_results = vectordb.similarity_search_by_vector(embedding=user_vector.tolist(), k=3)
     news_urls = [result.metadata.get("url") for result in search_results]
 
     return JsonResponse({'urls': news_urls})

@@ -129,3 +129,10 @@ def get_stock_ratio(company_name, date):
         return 0.0
 
     return (price_next_day / price_today)-1.0
+
+
+def get_historical_stock_data(company, start_date, end_date):
+    company_ticker =change_company_to_ticker(company)
+    stock = yf.Ticker(company_ticker)
+    hist = stock.history(start=start_date, end=end_date)
+    return hist.reset_index().to_dict(orient='records')
