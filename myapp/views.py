@@ -234,7 +234,7 @@ def save_user_question(question, kakao_id):
     # 사용자 질문을 Document로 변환
     document = Document(
         page_content=question,
-        metadata={"user_id": "admin"}  # 카카오 아이디 메타데이터로 추가
+        metadata={"kakaoId": "admin"}  # 카카오 아이디 메타데이터로 추가
     )
 
     texts = text_splitter.split_documents([document])
@@ -249,12 +249,31 @@ def save_user_question(question, kakao_id):
 def get_user_query_vector(kakao_id):
     # 사용자 DB에서 사용자 질문 벡터 가져오기
     user_db = Chroma(persist_directory="user_db", embedding_function=embedding_function)
+    docs = user_db.get(where={"kakaoId": "admin"}, include=["embeddings"])
+
+    if not docs or 'embeddings' not in docs:
+        return None
+
+    embeddings = np.array(docs['embeddings'])
+    user_vector = np.mean(embeddings, axis=0)
+    
+    return user_vector
+
+def get_relevant_news(kakao_id):
+    user_vector = get_user_query_vector(kakao_id)
+    print("get user vector!!! ", len(user_vector))
+    # Chroma DB에서 뉴스 기사 검색
+    vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
+    search_results = vectordb.similarity_search_by_vector(embedding=user_vector, k=3)
+    news_urls = [result.metadata.get("url") for result in search_results]
+
+    return JsonResponse({'urls': news_urls})
 
 @api_view(['POST'])
 def recommend_company(request):
     interest = request.data.get('interest')
 
-    vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
+    vectordb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
 
     prompt = ChatPromptTemplate.from_template("""
     context와 유저 관심분야를 참고해서 가장 관련 깊은 회사를 하나만 추천해줘. 회사명만 짧게 대답해야해.
