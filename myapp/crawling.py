@@ -135,6 +135,22 @@ def get_company_news_today(company, date):
     else:
         return []
     
-
-
+def get_input_news_today(company,date):
+    api_url = f"https://openapi.naver.com/v1/search/news.json?query={company}&display=20&sort=sim"  # 최대 20개 기사 가져오기
+    headers = {
+        'X-Naver-Client-Id': os.environ.get('NAVER_CLIENT_ID'),
+        'X-Naver-Client-Secret': os.environ.get('NAVER_CLIENT_SECRET')
+    }
+    response = requests.get(api_url, headers=headers)
+    if response.status_code == 200:
+        articles = response.json()['items']
+        filtered_articles = []
+        for article in articles:
+            pub_date = datetime.strptime(article['pubDate'], '%a, %d %b %Y %H:%M:%S %z')
+            if pub_date.date() == date:
+                article['content']= fetch_article_content(article['link'])
+                filtered_articles.append(article)
+        return filtered_articles
+    else:
+        return []
 

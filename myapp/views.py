@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from django.views import View
 from bs4 import BeautifulSoup
 from .yfinance_control import get_stock_price_on_date, get_stock_price, get_historical_stock_data
-from .crawling import get_company_news_today
+from .crawling import get_company_news_today, get_input_news_today
 from .get_emotion import calculate_emotion_score, calculate_relevance_score
 import yfinance as yf
 from rest_framework.decorators import api_view
@@ -126,20 +126,20 @@ class EmotionView(View):
             return JsonResponse({'error': 'company is required'}, status=400)
         dates = date.today()
         try:
-            articles = get_company_news_today(company,dates)
+            articles = get_input_news_today(company,dates)
             result_articles = []
             for article in articles:
                 if(article['content']!=''):
                     result_articles.append({
-                    'summary': article['summary'],
+                    'summary': article['title'],
                     'emotion': calculate_emotion_score(article['content']),
                     'relevance': calculate_relevance_score(article['content'],company),
                     'link': article['link']
                     })
                 else:
-                    print("cannot get contents") # 이제 발생해서는 안됨
+                    print("cannot get contents") 
                     result_articles.append({
-                        'title': article['title'],
+                        'summary': article['title'],
                         'emotion': calculate_emotion_score(article['title']),
                         'relevance': calculate_relevance_score(article['title'],company),
                         'link': article['link']
@@ -200,7 +200,8 @@ def chatbot_response(request):
     else:
         # 기존 Q&A 처리 로직
         save_user_question(user_input, kakao_id)
-        vectordb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
+        #newsdb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
+        vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
         question_prompt = ChatPromptTemplate.from_template("""context를 활용해서 질문에 대답해줘.
 
 <context>
@@ -253,7 +254,7 @@ def save_user_question(question, kakao_id):
     # 사용자 질문을 Document로 변환
     document = Document(
         page_content=question,
-        metadata={"kakaoId": "admin"}  # 카카오 아이디 메타데이터로 추가
+        metadata={"kakaoId": kakao_id}  # 카카오 아이디 메타데이터로 추가
     )
 
     texts = text_splitter.split_documents([document])
@@ -268,7 +269,7 @@ def save_user_question(question, kakao_id):
 def get_user_query_vector(kakao_id):
     # 사용자 DB에서 사용자 질문 벡터 가져오기
     user_db = Chroma(persist_directory="user_db", embedding_function=embedding_function)
-    docs = user_db.get(where={"kakaoId": "admin"}, include=["embeddings"])
+    docs = user_db.get(where={"kakaoId": kakao_id}, include=["embeddings"])
 
     if not docs or 'embeddings' not in docs:
         return None
@@ -278,7 +279,8 @@ def get_user_query_vector(kakao_id):
     
     return user_vector
 
-def get_relevant_news(kakao_id):
+def get_relevant_news(request):
+    kakao_id = request.GET.get('kakao_id')
     user_vector = get_user_query_vector(kakao_id)
     print("get user vector!!! ", len(user_vector))
     # Chroma DB에서 뉴스 기사 검색
