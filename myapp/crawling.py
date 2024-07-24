@@ -105,16 +105,15 @@ def get_company_news_today(company, date):
     for metadata in docs_metadatas:
         if(metadata['date']=='2024-07-18' and (metadata['url'] not in article_link_list)):
             article_link_list.append(metadata['url'])
-    if(len(article_link_list)>5):
-        article_link_list = article_link_list[0:5]
+    if(len(article_link_list)>20):
+        article_link_list = article_link_list[0:20]
     filtered_articles = []
     for link in article_link_list:
         docs = vectordb.get(where={"url": link})
         article = {'content':'', 'link': link}
         for documents in docs['documents']:
             article['content'] = article['content']+documents
-        article['title'] = summarize_score(article['content'])
-        print(article['content'])
+        article['summary'] = summarize_score(article['content'])
         filtered_articles.append(article)    
     return filtered_articles
     # 네이버 API를 이용해 뉴스 기사 가져오기

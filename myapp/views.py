@@ -96,15 +96,15 @@ class PredictView(View):
             for article in articles:
                 if(article['content']!=''):
                     result_articles.append({
-                    'title': article['title'],
+                    'summary': article['summary'],
                     'emotion': calculate_emotion_score(article['content']),
                     'relevance': calculate_relevance_score(article['content'],company),
                     'link': article['link']
                     })
                 else:
-                    print("cannot get contents")
+                    print("cannot get contents") #이제 발생해서는 안됨.
                     result_articles.append({
-                        'title': article['title'],
+                        'summary': article['summary'],
                         'emotion': calculate_emotion_score(article['title']),
                         'relevance': calculate_relevance_score(article['title'],company),
                         'link': article['link']
@@ -131,13 +131,13 @@ class EmotionView(View):
             for article in articles:
                 if(article['content']!=''):
                     result_articles.append({
-                    'title': article['title'],
+                    'summary': article['summary'],
                     'emotion': calculate_emotion_score(article['content']),
                     'relevance': calculate_relevance_score(article['content'],company),
                     'link': article['link']
                     })
                 else:
-                    print("cannot get contents")
+                    print("cannot get contents") # 이제 발생해서는 안됨
                     result_articles.append({
                         'title': article['title'],
                         'emotion': calculate_emotion_score(article['title']),

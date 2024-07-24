@@ -59,7 +59,7 @@ def summarize_score(title):
   chat_completion = client.chat.completions.create(
   messages=[
     {"role": "system", "content": "당신은 기사 요약 도우미입니다."},
-    {"role": "user", "content": f"다음 기사의 내용을 요약해주세요: {title}"}
+    {"role": "user", "content": f"다음 기사의 내용을 3~4문장으로 요약해주세요: {title}"}
   ],
   model="gpt-3.5-turbo",
   )
