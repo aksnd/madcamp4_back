@@ -266,6 +266,20 @@ def save_user_question(question, kakao_id):
     # 새로운 데이터 추가
     user_db.add_documents(documents)
 
+@api_view(['POST'])
+def save_user_summary(request):
+    summary = request.data.get('summary', '')
+    kakao_id = request.data.get('kakaoId', '')
+
+    if not summary or not kakao_id:
+        return JsonResponse({'error': 'Summary and kakaoId are required'}, status=400)
+
+    try:
+        save_user_question(summary, kakao_id)
+        return JsonResponse({'success': True}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def get_user_query_vector(kakao_id):
     # 사용자 DB에서 사용자 질문 벡터 가져오기
     user_db = Chroma(persist_directory="user_db", embedding_function=embedding_function)
