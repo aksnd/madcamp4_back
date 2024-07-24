@@ -3,6 +3,7 @@ from .models import Item
 from .serializers import ItemSerializer
 from django.http import JsonResponse
 from django.views import View
+from bs4 import BeautifulSoup
 from .yfinance_control import get_stock_price_on_date, get_stock_price, get_historical_stock_data
 from .crawling import get_company_news_today
 from .get_emotion import calculate_emotion_score, calculate_relevance_score
@@ -219,10 +220,24 @@ def chatbot_response(request):
         })
     
 def summarize_news_link(news_url):
-    article = Article(news_url)
-    article.download()
-    article.parse()
-    response = llm.call_as_llm(f"다음 신문 내용을 요약해줘: {article.text}")
+    try:
+        response = requests.get(news_url, timeout=10)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        content = soup.select_one("div#newsct_article article#dic_area")  # 네이버 뉴스 본문이 담긴 태그 (변경될 수 있음)
+        if content:
+            article = content.get_text(strip=True)
+        else:
+            return ''
+    
+    except requests.exceptions.Timeout:
+        print(f"Request to {news_url} timed out.")
+        return ''
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        return ''
+    
+    response = llm.call_as_llm(f"다음 신문 내용을 요약해줘: {article}")
     return response
 
 def search_related_articles(news_summary, top_k=3):
@@ -270,14 +285,30 @@ def get_relevant_news(kakao_id):
     vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
     search_results = vectordb.similarity_search_by_vector(embedding=user_vector.tolist(), k=3)
     news_urls = [result.metadata.get("url") for result in search_results]
+    news_summary = []
+    for url in news_urls:
+        news_summary.append(summarize_news_link(url))
+    return JsonResponse({'urls': news_urls, 'summary': news_summary})
 
-    return JsonResponse({'urls': news_urls})
+def get_relevant_users(request):
+    query = request.GET.get('query')
+    if not query:
+        return JsonResponse({"error": "Query parameter is missing"}, status=400)
+    
+    userdb = Chroma(persist_directory="user_db", embedding_function=embedding_function)
+    docs = userdb.similarity_search(query=query, k=3)
+
+    users = []
+    for doc in docs:
+        users.append(doc.metadata['kakaoId'])
+
+    return JsonResponse({'users': users})
 
 @api_view(['POST'])
 def recommend_company(request):
     interest = request.data.get('interest')
 
-    vectordb = Chroma(persist_directory="news_db", embedding_function=embedding_function)
+    vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
 
     prompt = ChatPromptTemplate.from_template("""
     context와 유저 관심분야를 참고해서 가장 관련 깊은 회사를 하나만 추천해줘. 회사명만 짧게 대답해야해.

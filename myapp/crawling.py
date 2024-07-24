@@ -7,6 +7,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
+from .get_emotion import summarize_score
 from openai import OpenAI
 
 NAVER_API_URL = "https://openapi.naver.com/v1/search/news.json"
@@ -94,8 +95,30 @@ def crawl_and_save_news(query):
     
     
 def get_company_news_today(company, date):
+    api_key = os.environ.get('OPENAI_API_KEY')
+    embedding_function = OpenAIEmbeddings(api_key=api_key, model="text-embedding-3-small")
+    vectordb = Chroma(persist_directory="company_db", embedding_function=embedding_function)
+    docs = vectordb.get(where={"company": company})
+    docs_metadatas = docs['metadatas']
+    docs_documents = docs['documents']
+    article_link_list =[]
+    for metadata in docs_metadatas:
+        if(metadata['date']=='2024-07-18' and (metadata['url'] not in article_link_list)):
+            article_link_list.append(metadata['url'])
+    if(len(article_link_list)>5):
+        article_link_list = article_link_list[0:5]
+    filtered_articles = []
+    for link in article_link_list:
+        docs = vectordb.get(where={"url": link})
+        article = {'content':'', 'link': link}
+        for documents in docs['documents']:
+            article['content'] = article['content']+documents
+        article['title'] = summarize_score(article['content'])
+        print(article['content'])
+        filtered_articles.append(article)    
+    return filtered_articles
     # 네이버 API를 이용해 뉴스 기사 가져오기
-    api_url = f"https://openapi.naver.com/v1/search/news.json?query={company}&display=20"  # 최대 20개 기사 가져오기
+    api_url = f"https://openapi.naver.com/v1/search/news.json?query={company}&display=20&sort=sim"  # 최대 20개 기사 가져오기
     headers = {
         'X-Naver-Client-Id': os.environ.get('NAVER_CLIENT_ID'),
         'X-Naver-Client-Secret': os.environ.get('NAVER_CLIENT_SECRET')

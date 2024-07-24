@@ -6,5 +6,5 @@ class Command(BaseCommand):
     help = 'Crawl news and save to database'
 
     def handle(self, *args, **kwargs):
-        crawl_and_save_news('KB금융')  # 크롤링 함수 호출
+        crawl_and_save_news('LG전자')  # 크롤링 함수 호출
         self.stdout.write(self.style.SUCCESS('Successfully crawled news'))

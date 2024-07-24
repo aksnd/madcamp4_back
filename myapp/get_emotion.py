@@ -49,3 +49,19 @@ def calculate_relevance_score(title, company):
     return 5
 
   return answer
+
+def summarize_score(title):
+  client = OpenAI(
+    # This is the default and can be omitted
+    api_key=api_key
+  )
+
+  chat_completion = client.chat.completions.create(
+  messages=[
+    {"role": "system", "content": "당신은 기사 요약 도우미입니다."},
+    {"role": "user", "content": f"다음 기사의 내용을 요약해주세요: {title}"}
+  ],
+  model="gpt-3.5-turbo",
+  )
+  answer = chat_completion.choices[0].message.content
+  return answer
